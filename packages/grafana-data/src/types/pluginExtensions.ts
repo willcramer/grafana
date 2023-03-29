@@ -4,6 +4,7 @@
 
 export enum PluginExtensionPlacements {
   DashboardPanelMenu = 'grafana/dashboard/panel/menu',
+  ExploreToolbar = 'grafana/explore/toolbar/actions',
 }
 
 export enum PluginExtensionTypes {

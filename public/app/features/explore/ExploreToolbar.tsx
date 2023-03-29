@@ -1,5 +1,5 @@
 import { css } from '@emotion/css';
-import React, { lazy, PureComponent, RefObject, Suspense } from 'react';
+import React, { PureComponent, RefObject } from 'react';
 import { connect, ConnectedProps } from 'react-redux';
 
 import { DataSourceInstanceSettings, RawTimeRange } from '@grafana/data';
@@ -18,6 +18,7 @@ import { updateFiscalYearStartMonthForSession, updateTimeZoneForSession } from '
 import { getFiscalYearStartMonth, getTimeZone } from '../profile/state/selectors';
 
 import { ExploreTimeControls } from './ExploreTimeControls';
+import { ExploreToolbarExtensionPoint } from './ExploreToolbarExtensionPoint';
 import { LiveTailButton } from './LiveTailButton';
 import { changeDatasource } from './state/datasource';
 import { splitClose, splitOpen, maximizePaneAction, evenPaneResizeAction } from './state/main';
@@ -25,10 +26,6 @@ import { cancelQueries, runQueries } from './state/query';
 import { isSplit } from './state/selectors';
 import { syncTimes, changeRefreshInterval } from './state/time';
 import { LiveTailControls } from './useLiveTailControls';
-
-const AddToDashboard = lazy(() =>
-  import('./AddToDashboard').then(({ AddToDashboard }) => ({ default: AddToDashboard }))
-);
 
 const getStyles = (exploreId: ExploreId, isLargerExploreId: boolean) => {
   return {
@@ -184,11 +181,7 @@ class UnConnectedExploreToolbar extends PureComponent<Props> {
         </ButtonGroup>
       ),
 
-      showExploreToDashboard && (
-        <Suspense key="addToDashboard" fallback={null}>
-          <AddToDashboard exploreId={exploreId} />
-        </Suspense>
-      ),
+      showExploreToDashboard && <ExploreToolbarExtensionPoint exploreId={exploreId} />,
 
       !isLive && (
         <ExploreTimeControls
