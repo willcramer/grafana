@@ -41,8 +41,9 @@ export function ExploreToolbarExtensionPoint(props: Props): ReactElement {
   return (
     <Suspense fallback={null}>
       <ButtonGroup>
-        <AddToDashboard exploreId={exploreId} />
+        <AddToDashboard key="add-to-dashboard" exploreId={exploreId} />
         <ButtonSelect
+          key="select-extension"
           variant="canvas"
           options={options}
           onChange={(option) => {

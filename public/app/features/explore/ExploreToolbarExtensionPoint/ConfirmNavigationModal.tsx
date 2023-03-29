@@ -1,7 +1,7 @@
 import React, { ReactElement } from 'react';
 
-import { PluginExtensionLink } from '@grafana/data';
-import { config, locationService } from '@grafana/runtime';
+import { locationUtil, PluginExtensionLink } from '@grafana/data';
+import { locationService } from '@grafana/runtime';
 import { Button, Modal, VerticalGroup } from '@grafana/ui';
 
 type Props = {
@@ -12,7 +12,7 @@ type Props = {
 export function ConfirmNavigationModal(props: Props): ReactElement {
   const { onDismiss, extension } = props;
   const openInNewTab = () => {
-    global.open(config.appUrl + extension.path, '_blank');
+    global.open(locationUtil.assureBaseUrl(extension.path), '_blank');
     onDismiss();
   };
   const openInCurrentTab = () => locationService.push(extension.path);
