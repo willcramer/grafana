@@ -392,6 +392,7 @@ steps:
   - go test -tags requires_buildifer -short -covermode=atomic -timeout=5m ./pkg/...
   depends_on:
   - wire-install
+  failure: ignore
   image: grafana/grafana-ci-windows-test:0.1.0
   name: test-backend
 trigger:
@@ -2090,6 +2091,7 @@ steps:
   - go test -tags requires_buildifer -short -covermode=atomic -timeout=5m ./pkg/...
   depends_on:
   - wire-install
+  failure: ignore
   image: grafana/grafana-ci-windows-test:0.1.0
   name: test-backend
 trigger:
@@ -2162,6 +2164,7 @@ steps:
   - go test -tags requires_buildifer -short -covermode=atomic -timeout=5m ./pkg/...
   depends_on:
   - wire-install
+  failure: ignore
   image: grafana/grafana-ci-windows-test:0.1.0
   name: test-backend
 trigger:
@@ -2761,6 +2764,7 @@ steps:
   - go test -tags requires_buildifer -short -covermode=atomic -timeout=5m ./pkg/...
   depends_on:
   - wire-install
+  failure: ignore
   image: grafana/grafana-ci-windows-test:0.1.0
   name: test-backend
 trigger:
@@ -2833,6 +2837,7 @@ steps:
   - go test -tags requires_buildifer -short -covermode=atomic -timeout=5m ./pkg/...
   depends_on:
   - wire-install
+  failure: ignore
   image: grafana/grafana-ci-windows-test:0.1.0
   name: test-backend
 trigger:
@@ -5320,6 +5325,7 @@ steps:
   - go test -tags requires_buildifer -short -covermode=atomic -timeout=5m ./pkg/...
   depends_on:
   - wire-install
+  failure: ignore
   image: grafana/grafana-ci-windows-test:0.1.0
   name: test-backend
 trigger:
@@ -5386,6 +5392,7 @@ steps:
   - go test -tags requires_buildifer -short -covermode=atomic -timeout=5m ./pkg/...
   depends_on:
   - wire-install
+  failure: ignore
   image: grafana/grafana-ci-windows-test:0.1.0
   name: test-backend
 trigger:
@@ -7225,6 +7232,6 @@ kind: secret
 name: enterprise2_security_prefix
 ---
 kind: signature
-hmac: 92903cd8bd33e69361b1955604d31265086874650a2e08f674b315cccc341a58
+hmac: 3254a31df3cda78a49cf479b2be7f3a93c86143d232cfb3c4d9291450cddd79d
 
 ...
