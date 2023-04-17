@@ -409,7 +409,7 @@ trigger:
 type: docker
 volumes:
 - host:
-    path: /var/run/docker.sock
+    path: //./pipe/docker_engine/
   name: docker
 ---
 clone:
@@ -2058,7 +2058,7 @@ trigger:
 type: docker
 volumes:
 - host:
-    path: /var/run/docker.sock
+    path: //./pipe/docker_engine/
   name: docker
 ---
 clone:
@@ -2104,7 +2104,7 @@ trigger:
 type: docker
 volumes:
 - host:
-    path: /var/run/docker.sock
+    path: //./pipe/docker_engine/
   name: docker
 ---
 clone:
@@ -2176,7 +2176,7 @@ trigger:
 type: docker
 volumes:
 - host:
-    path: /var/run/docker.sock
+    path: //./pipe/docker_engine/
   name: docker
 ---
 clone:
@@ -2775,7 +2775,7 @@ trigger:
 type: docker
 volumes:
 - host:
-    path: /var/run/docker.sock
+    path: //./pipe/docker_engine/
   name: docker
 ---
 clone:
@@ -2847,7 +2847,7 @@ trigger:
 type: docker
 volumes:
 - host:
-    path: /var/run/docker.sock
+    path: //./pipe/docker_engine/
   name: docker
 ---
 clone:
@@ -2913,7 +2913,7 @@ trigger:
 type: docker
 volumes:
 - host:
-    path: /var/run/docker.sock
+    path: //./pipe/docker_engine/
   name: docker
 ---
 clone:
@@ -3495,7 +3495,7 @@ trigger:
 type: docker
 volumes:
 - host:
-    path: /var/run/docker.sock
+    path: //./pipe/docker_engine/
   name: docker
 ---
 clone:
@@ -5328,7 +5328,7 @@ trigger:
 type: docker
 volumes:
 - host:
-    path: /var/run/docker.sock
+    path: //./pipe/docker_engine/
   name: docker
 ---
 clone:
@@ -5394,7 +5394,7 @@ trigger:
 type: docker
 volumes:
 - host:
-    path: /var/run/docker.sock
+    path: //./pipe/docker_engine/
   name: docker
 ---
 clone:
@@ -5592,7 +5592,7 @@ trigger:
 type: docker
 volumes:
 - host:
-    path: /var/run/docker.sock
+    path: //./pipe/docker_engine/
   name: docker
 ---
 clone:
@@ -6325,7 +6325,7 @@ trigger:
 type: docker
 volumes:
 - host:
-    path: /var/run/docker.sock
+    path: //./pipe/docker_engine/
   name: docker
 ---
 clone:
@@ -6892,6 +6892,54 @@ volumes:
     medium: memory
 ---
 clone:
+  disable: true
+depends_on: []
+image_pull_secrets:
+- dockerconfigjson
+kind: pipeline
+name: publish-ci-windows-test-image
+platform:
+  arch: amd64
+  os: windows
+  version: "1809"
+services: []
+steps:
+- commands:
+  - git clone "https://$$env:GITHUB_TOKEN@github.com/grafana/grafana-ci-sandbox.git"
+    .
+  - git checkout -f $$env:DRONE_COMMIT
+  environment:
+    GITHUB_TOKEN:
+      from_secret: github_token
+  image: grafana/ci-wix:0.1.1
+  name: clone
+- commands:
+  - cd scripts\build\ci-windows-test
+  - docker login -u $$env:DOCKER_USERNAME -p $$env:DOCKER_PASSWORD
+  - docker build -t grafana/grafana-ci-windows-test:$$env:TAG .
+  - docker push grafana/grafana-ci-windows-test:$$env:TAG
+  environment:
+    DOCKER_PASSWORD:
+      from_secret: docker_password
+    DOCKER_USERNAME:
+      from_secret: docker_username
+  image: docker:windowsservercore-1809
+  name: build-and-publish
+  volumes:
+  - name: docker
+    path: //./pipe/docker_engine/
+trigger:
+  event:
+  - promote
+  target:
+  - ci-windows-test-image
+type: docker
+volumes:
+- host:
+    path: //./pipe/docker_engine/
+  name: docker
+---
+clone:
   retries: 3
 kind: pipeline
 name: scan-grafana/grafana:latest-image
@@ -7177,6 +7225,6 @@ kind: secret
 name: enterprise2_security_prefix
 ---
 kind: signature
-hmac: 84c51dcaf5a6f5b5fdf6ff371258354bdc5fa231b1655136d5e7f78c8bb29577
+hmac: 92903cd8bd33e69361b1955604d31265086874650a2e08f674b315cccc341a58
 
 ...
