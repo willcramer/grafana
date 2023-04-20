@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/grafana/grafana/pkg/bus"
@@ -36,6 +37,9 @@ type Service struct {
 
 	// bus is currently used to publish event in case of title change
 	bus bus.Bus
+
+	mutex    sync.RWMutex
+	registry map[string]folder.RegistryService
 }
 
 func ProvideService(
@@ -58,6 +62,7 @@ func ProvideService(
 		accessControl:        ac,
 		bus:                  bus,
 		db:                   db,
+		registry:             make(map[string]folder.RegistryService),
 	}
 	if features.IsEnabled(featuremgmt.FlagNestedFolders) {
 		srv.DBMigration(db)
@@ -213,6 +218,22 @@ func (s *Service) getFolderByTitle(ctx context.Context, orgID int64, title strin
 func (s *Service) Create(ctx context.Context, cmd *folder.CreateFolderCommand) (*folder.Folder, error) {
 	logger := s.log.FromContext(ctx)
 
+	if cmd.SignedInUser == nil {
+		return nil, folder.ErrBadRequest.Errorf("missing signed in user")
+	}
+
+	if !s.accessControl.IsDisabled() && s.features.IsEnabled(featuremgmt.FlagNestedFolders) && cmd.ParentUID != "" {
+		// Check that the user is allowed to create a subfolder in this folder
+		evaluator := accesscontrol.EvalPermission(dashboards.ActionFoldersWrite, dashboards.ScopeFoldersProvider.GetResourceScopeUID(cmd.ParentUID))
+		hasAccess, evalErr := s.accessControl.Evaluate(ctx, cmd.SignedInUser, evaluator)
+		if evalErr != nil {
+			return nil, evalErr
+		}
+		if !hasAccess {
+			return nil, dashboards.ErrFolderAccessDenied
+		}
+	}
+
 	dashFolder := dashboards.NewDashboardFolder(cmd.Title)
 	dashFolder.OrgID = cmd.OrgID
 
@@ -223,9 +244,6 @@ func (s *Service) Create(ctx context.Context, cmd *folder.CreateFolderCommand) (
 
 	dashFolder.SetUID(trimmedUID)
 
-	if cmd.SignedInUser == nil {
-		return nil, folder.ErrBadRequest.Errorf("missing signed in user")
-	}
 	user := cmd.SignedInUser
 	userID := user.UserID
 	if userID == 0 {
@@ -424,6 +442,12 @@ func (s *Service) Delete(ctx context.Context, cmd *folder.DeleteFolderCommand) e
 	if cmd.SignedInUser == nil {
 		return folder.ErrBadRequest.Errorf("missing signed in user")
 	}
+	if cmd.UID == "" {
+		return folder.ErrBadRequest.Errorf("missing UID")
+	}
+	if cmd.OrgID < 1 {
+		return folder.ErrBadRequest.Errorf("invalid orgID")
+	}
 	result := []string{cmd.UID}
 	err := s.db.InTransaction(ctx, func(ctx context.Context) error {
 		if s.features.IsEnabled(featuremgmt.FlagNestedFolders) {
@@ -453,6 +477,11 @@ func (s *Service) Delete(ctx context.Context, cmd *folder.DeleteFolderCommand) e
 				}
 				return dashboards.ErrFolderAccessDenied
 			}
+
+			if err := s.deleteChildrenInFolder(ctx, dashFolder.OrgID, dashFolder.UID); err != nil {
+				return err
+			}
+
 			err = s.legacyDelete(ctx, cmd, dashFolder)
 			if err != nil {
 				return err
@@ -462,6 +491,15 @@ func (s *Service) Delete(ctx context.Context, cmd *folder.DeleteFolderCommand) e
 	})
 
 	return err
+}
+
+func (s *Service) deleteChildrenInFolder(ctx context.Context, orgID int64, UID string) error {
+	for _, v := range s.registry {
+		if err := v.DeleteInFolder(ctx, orgID, UID); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *Service) legacyDelete(ctx context.Context, cmd *folder.DeleteFolderCommand, dashFolder *folder.Folder) error {
@@ -478,15 +516,33 @@ func (s *Service) Move(ctx context.Context, cmd *folder.MoveFolderCommand) (*fol
 		return nil, folder.ErrBadRequest.Errorf("missing signed in user")
 	}
 
-	g, err := guardian.NewByUID(ctx, cmd.UID, cmd.OrgID, cmd.SignedInUser)
-	if err != nil {
-		return nil, err
-	}
-	if canSave, err := g.CanSave(); err != nil || !canSave {
-		if err != nil {
-			return nil, toFolderError(err)
+	// Check that the user is allowed to move the folder to the destination folder
+	if !s.accessControl.IsDisabled() {
+		var evaluator accesscontrol.Evaluator
+		if cmd.NewParentUID != "" {
+			evaluator = accesscontrol.EvalPermission(dashboards.ActionFoldersWrite, dashboards.ScopeFoldersProvider.GetResourceScopeUID(cmd.NewParentUID))
+		} else {
+			// Evaluate folder creation permission when moving folder to the root level
+			evaluator = accesscontrol.EvalPermission(dashboards.ActionFoldersCreate)
 		}
-		return nil, dashboards.ErrFolderAccessDenied
+		hasAccess, evalErr := s.accessControl.Evaluate(ctx, cmd.SignedInUser, evaluator)
+		if evalErr != nil {
+			return nil, evalErr
+		}
+		if !hasAccess {
+			return nil, dashboards.ErrFolderAccessDenied
+		}
+	} else {
+		g, err := guardian.NewByUID(ctx, cmd.UID, cmd.OrgID, cmd.SignedInUser)
+		if err != nil {
+			return nil, err
+		}
+		if canSave, err := g.CanSave(); err != nil || !canSave {
+			if err != nil {
+				return nil, toFolderError(err)
+			}
+			return nil, dashboards.ErrFolderAccessDenied
+		}
 	}
 
 	// here we get the folder, we need to get the height of current folder
@@ -512,10 +568,14 @@ func (s *Service) Move(ctx context.Context, cmd *folder.MoveFolderCommand) (*fol
 		}
 	}
 
+	newParentUID := ""
+	if cmd.NewParentUID != "" {
+		newParentUID = cmd.NewParentUID
+	}
 	return s.store.Update(ctx, folder.UpdateFolderCommand{
 		UID:          cmd.UID,
 		OrgID:        cmd.OrgID,
-		NewParentUID: &cmd.NewParentUID,
+		NewParentUID: &newParentUID,
 		SignedInUser: cmd.SignedInUser,
 	})
 }
@@ -553,7 +613,8 @@ func (s *Service) nestedFolderDelete(ctx context.Context, cmd *folder.DeleteFold
 		}
 		result = append(result, subfolders...)
 	}
-	logger.Info("deleting folder", "org_id", cmd.OrgID, "uid", cmd.UID)
+
+	logger.Info("deleting folder and its contents", "org_id", cmd.OrgID, "uid", cmd.UID)
 	err = s.store.Delete(ctx, cmd.UID, cmd.OrgID)
 	if err != nil {
 		logger.Info("failed deleting folder", "org_id", cmd.OrgID, "uid", cmd.UID, "err", err)
@@ -634,23 +695,9 @@ func (s *Service) BuildSaveDashboardCommand(ctx context.Context, dto *dashboards
 		return nil, dashboards.ErrDashboardUidTooLong
 	}
 
-	isParentFolderChanged, err := s.dashboardStore.ValidateDashboardBeforeSave(ctx, dash, dto.Overwrite)
+	_, err := s.dashboardStore.ValidateDashboardBeforeSave(ctx, dash, dto.Overwrite)
 	if err != nil {
 		return nil, err
-	}
-
-	if isParentFolderChanged {
-		// Check that the user is allowed to add a dashboard to the folder
-		guardian, err := guardian.NewByDashboard(ctx, dash, dto.OrgID, dto.User)
-		if err != nil {
-			return nil, err
-		}
-		if canSave, err := guardian.CanCreate(dash.FolderID, dash.IsFolder); err != nil || !canSave {
-			if err != nil {
-				return nil, err
-			}
-			return nil, dashboards.ErrDashboardUpdateAccessDenied
-		}
 	}
 
 	guard, err := getGuardianForSavePermissionCheck(ctx, dash, dto.User)
@@ -772,4 +819,18 @@ func toFolderError(err error) error {
 	}
 
 	return err
+}
+
+func (s *Service) RegisterService(r folder.RegistryService) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+
+	_, ok := s.registry[r.Kind()]
+	if ok {
+		return folder.ErrTargetRegistrySrvConflict.Errorf("target registry service: %s already exists", r.Kind())
+	}
+
+	s.registry[r.Kind()] = r
+
+	return nil
 }

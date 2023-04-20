@@ -35,7 +35,6 @@ interface LogsContainerProps extends PropsFromRedux {
   scanRange?: RawTimeRange;
   syncedTimes: boolean;
   loadingState: LoadingState;
-  scrollElement?: HTMLDivElement;
   onClickFilterLabel: (key: string, value: string) => void;
   onClickFilterOutLabel: (key: string, value: string) => void;
   onStartScanning: () => void;
@@ -66,10 +65,13 @@ class LogsContainer extends PureComponent<LogsContainerProps> {
   };
 
   getLogRowContextUi = (row: LogRowModel, runContextQuery?: () => void): React.ReactNode => {
-    const { datasourceInstance } = this.props;
+    const { datasourceInstance, logsQueries } = this.props;
 
     if (hasLogsContextUiSupport(datasourceInstance) && datasourceInstance.getLogRowContextUi) {
-      return datasourceInstance.getLogRowContextUi(row, runContextQuery);
+      const query = (logsQueries ?? []).find(
+        (q) => q.refId === row.dataFrame.refId && q.datasource != null && q.datasource.type === datasourceInstance.type
+      );
+      return datasourceInstance.getLogRowContextUi(row, runContextQuery, query);
     }
 
     return <></>;
@@ -115,7 +117,6 @@ class LogsContainer extends PureComponent<LogsContainerProps> {
       exploreId,
       addResultsToCache,
       clearCache,
-      scrollElement,
       logsVolume,
     } = this.props;
 
@@ -136,6 +137,8 @@ class LogsContainer extends PureComponent<LogsContainerProps> {
                   isPaused={this.props.isPaused}
                   onPause={controls.pause}
                   onResume={controls.resume}
+                  onClear={controls.clear}
+                  clearedAtIndex={this.props.clearedAtIndex}
                 />
               )}
             </LiveTailControls>
@@ -175,7 +178,6 @@ class LogsContainer extends PureComponent<LogsContainerProps> {
             getFieldLinks={this.getFieldLinks}
             addResultsToCache={() => addResultsToCache(exploreId)}
             clearCache={() => clearCache(exploreId)}
-            scrollElement={scrollElement}
             eventBus={this.props.eventBus}
           />
         </LogsCrossFadeTransition>
@@ -195,6 +197,7 @@ function mapStateToProps(state: StoreState, { exploreId }: { exploreId: string }
     datasourceInstance,
     isLive,
     isPaused,
+    clearedAtIndex,
     range,
     absoluteRange,
     supplementaryQueries,
@@ -214,6 +217,7 @@ function mapStateToProps(state: StoreState, { exploreId }: { exploreId: string }
     datasourceInstance,
     isLive,
     isPaused,
+    clearedAtIndex,
     range,
     absoluteRange,
     logsVolume,
