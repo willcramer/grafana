@@ -27,7 +27,7 @@ describe('SQLSearcher', () => {
       sort: query.sort,
       tag: undefined,
       type: DashboardSearchItemType.DashDB,
-      folderIds: [0],
+      folderUIDs: ['General'],
     });
   });
 
@@ -50,7 +50,7 @@ describe('SQLSearcher', () => {
       sort: query.sort,
       tag: undefined,
       type: DashboardSearchItemType.DashFolder,
-      folderIds: [0],
+      folderUIDs: ['any'],
     });
 
     searchMock.mockClear();
@@ -69,7 +69,7 @@ describe('SQLSearcher', () => {
       sort: query2.sort,
       query: query2.query,
       tag: undefined,
-      folderIds: [0],
+      folderUIDs: ['any'],
     });
 
     searchMock.mockClear();
