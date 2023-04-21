@@ -8747,7 +8747,7 @@
               "type": "string"
             },
             "description": "List of folder UID’s to search in for dashboards",
-            "name": "FolderUIDs",
+            "name": "folderUIDs",
             "in": "query"
           },
           {
