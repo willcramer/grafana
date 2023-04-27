@@ -5,6 +5,7 @@ import { TestProvider } from 'test/helpers/TestProvider';
 import { assertIsDefined } from 'test/helpers/asserts';
 
 import { wellFormedDashboard, wellFormedEmptyFolder, wellFormedFolder } from '../fixtures/dashboardsTreeItem.fixture';
+import { SelectionState } from '../types';
 
 import { DashboardsTree } from './DashboardsTree';
 
@@ -20,18 +21,13 @@ describe('browse-dashboards DashboardsTree', () => {
   const emptyFolderIndicator = wellFormedEmptyFolder();
   const dashboard = wellFormedDashboard(2);
   const noop = () => {};
-  const selectedItems = {
-    $all: false,
-    folder: {},
-    dashboard: {},
-    panel: {},
-  };
+  const isSelected = () => SelectionState.Unselected;
 
   it('renders a dashboard item', () => {
     render(
       <DashboardsTree
         items={[dashboard]}
-        selectedItems={selectedItems}
+        isSelected={isSelected}
         width={WIDTH}
         height={HEIGHT}
         onFolderClick={noop}
@@ -48,7 +44,7 @@ describe('browse-dashboards DashboardsTree', () => {
     render(
       <DashboardsTree
         items={[folder]}
-        selectedItems={selectedItems}
+        isSelected={isSelected}
         width={WIDTH}
         height={HEIGHT}
         onFolderClick={noop}
@@ -65,7 +61,7 @@ describe('browse-dashboards DashboardsTree', () => {
     render(
       <DashboardsTree
         items={[folder]}
-        selectedItems={selectedItems}
+        isSelected={isSelected}
         width={WIDTH}
         height={HEIGHT}
         onFolderClick={handler}
@@ -83,7 +79,7 @@ describe('browse-dashboards DashboardsTree', () => {
     render(
       <DashboardsTree
         items={[emptyFolderIndicator]}
-        selectedItems={selectedItems}
+        isSelected={isSelected}
         width={WIDTH}
         height={HEIGHT}
         onFolderClick={noop}
