@@ -2077,7 +2077,19 @@ platform:
   os: linux
 services: []
 steps:
-- image: grafana/drone-downstream
+- commands:
+  - git fetch origin main
+  - git checkout main
+  - git remote add grafana-mirror $${DOWNSTREAM_REPO}
+  - git push -f grafana-mirror main
+  environment:
+    DOWNSTREAM_REPO:
+      from_secret: grafana_downstream_repo
+  image: grafana/build-container:1.7.3
+  name: sync-grafana-mirror
+- depends_on:
+  - sync-grafana-mirror
+  image: grafana/drone-downstream
   name: trigger-enterprise-downstream
   settings:
     params:
@@ -6823,6 +6835,6 @@ kind: secret
 name: enterprise2_security_prefix
 ---
 kind: signature
-hmac: e8c29c328c07ab24a7f858cc319c9b35a5bec1fc79531e809e5d3a390bbcbc2f
+hmac: 050da566fa79d1f2f7242dcb94c1ff7089b4c71a3086d6909e5373688a9e23dc
 
 ...
