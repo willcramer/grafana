@@ -295,7 +295,6 @@ func ProvideService(plugCtxProvider *plugincontext.Provider, cfg *setting.Cfg, r
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
 		CheckOrigin:     checkOrigin,
-		PingInterval:    time.Second * 10,
 	})
 
 	g.websocketHandler = func(ctx *contextmodel.ReqContext) {
