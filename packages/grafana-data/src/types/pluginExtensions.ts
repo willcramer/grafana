@@ -1,5 +1,6 @@
 import { DataQuery } from '@grafana/schema';
 
+import { PanelData } from './panel';
 import { RawTimeRange, TimeZone } from './time';
 
 // Plugin Extensions types
@@ -76,6 +77,7 @@ export type PluginExtensionPanelContext = {
   timeZone: TimeZone;
   dashboard: Dashboard;
   targets: DataQuery[];
+  data?: PanelData;
 };
 
 type Dashboard = {
