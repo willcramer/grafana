@@ -1284,7 +1284,7 @@ Faro javascript agent is initialized. Default is `false`.
 
 ### custom_endpoint
 
-Custom HTTP endpoint to send events captured by the Faro agent to. Default, `/log-grafana-javascript-agent`, will log the events to stdout.
+Custom HTTP endpoint to which events captured by the Faro agent are sent. Default, `/log-grafana-javascript-agent`, will log the events to stdout.
 
 ### log_endpoint_requests_per_second_limit
 
